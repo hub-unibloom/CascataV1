@@ -34,8 +34,16 @@ services:
     command: >
       bin/yugabyted start
       --daemon=false
-      --tserver_flags=ysql_enable_auth=false,yb_enable_read_committed_isolation=true,enable_ysql_conn_mgr=true,allowed_preview_flags_csv=enable_ysql_conn_mgr,ysql_pg_conf_csv='shared_preload_libraries=pg_stat_statements,pgaudit'
-      --master_flags=default_memory_limit_to_ram_ratio=0.6
+      --tserver_flags="
+        ysql_enable_auth=false,
+        yb_enable_read_committed_isolation=true,
+        enable_ysql_conn_mgr=true,
+        allowed_preview_flags_csv=enable_ysql_conn_mgr,
+        ysql_pg_conf_csv=\"shared_preload_libraries='pg_stat_statements,pgaudit'\"
+      "
+      --master_flags="
+        default_memory_limit_to_ram_ratio=0.6
+      "
     ports:
       - "5433:5433"    # YSQL (PostgreSQL protocol)
       - "7100:7100"    # YB Master UI
@@ -59,7 +67,7 @@ services:
 
   # ===========================================================================
   # DRAGONFLYDB — Cache em memória (drop-in Redis)
-  # RAM Limit: 128MB | Porta: 6379
+  # RAM Limit: 256MB | Porta: 6379
   # ===========================================================================
   dragonflydb:
     image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.27.1
@@ -111,8 +119,7 @@ services:
       - --pandaproxy-addr=0.0.0.0:8082
       - --advertise-pandaproxy-addr=localhost:8082
       - --schema-registry-addr=0.0.0.0:8081
-      - '--set=redpanda.auto_create_topics_enabled=true'
-      - '--set=redpanda.delete_retention_ms=604800000'
+      - --set=redpanda.auto_create_topics_enabled=true
     ports:
       - "9092:9092"    # Kafka API (external)
       - "8081:8081"    # Schema Registry
