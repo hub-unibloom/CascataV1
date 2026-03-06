@@ -12,7 +12,7 @@
 #
 # Uso:
 #   chmod +x cleanup.sh
-#   ./cleanup.sh          # modo interativo
+#   .             # modo interativo
 #   ./cleanup.sh --soft   # modo leve (sem confirmação)
 #   ./cleanup.sh --medium # modo médio (sem confirmação)
 #   ./cleanup.sh --full   # modo total (sem confirmação)

@@ -31,12 +31,13 @@ services:
     image: cascata/yugabytedb:shared
     pull_policy: never
     container_name: cascata-yugabytedb
-    command: >
-      bin/yugabyted start
-      --daemon=false
-      --tserver_flags="ysql_enable_auth=false,yb_enable_read_committed_isolation=true,enable_ysql_conn_mgr=true,allowed_preview_flags_csv=enable_ysql_conn_mgr,ysql_pg_conf_csv='shared_preload_libraries=pg_cron,pg_stat_statements,pgaudit'"
-      --master_flags="default_memory_limit_to_ram_ratio=0.6"
-      --base_dir=/home/yugabyte/yb_data
+    command:
+      - bin/yugabyted
+      - start
+      - --daemon=false
+      - --tserver_flags=ysql_enable_auth=false,yb_enable_read_committed_isolation=true,enable_ysql_conn_mgr=true,allowed_preview_flags_csv=enable_ysql_conn_mgr,ysql_pg_conf_csv="shared_preload_libraries='pg_cron,pg_stat_statements,pgaudit'",memory_limit_hard_bytes=536870912
+      - --master_flags=memory_limit_hard_bytes=134217728
+      - --base_dir=/home/yugabyte/yb_data
     ports:
       - "5433:5433"    # YSQL (PostgreSQL protocol)
       - "7100:7100"    # YB Master UI

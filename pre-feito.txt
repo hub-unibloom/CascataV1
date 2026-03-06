@@ -31,8 +31,10 @@ sudo usermod -aG docker $USER
 # - Atualizações base de Kernel 5.14+ entrem em vigor.
 # - As novas permissões do grupo do Docker sejam aplicadas à sua sessão.
 sudo dnf install -y nano
+rm install.sh
 nano install.sh
 chmod +x install.sh
+./install.sh
 echo "Preparação concluída. O servidor reiniciará em 5 segundos."
 sleep 7
 sudo reboot
