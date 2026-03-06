@@ -66,7 +66,7 @@ services:
     container_name: cascata-dragonflydb
     command: >
       dragonfly
-      --maxmemory=100mb
+      --maxmemory=256mb
       --proactor_threads=1
       --cache_mode=true
       --hz=100
@@ -149,8 +149,8 @@ services:
       - "9001:9000"    # Native interface (remapped to avoid conflict with YB tserver)
     volumes:
       - cascata-ch-data:/var/lib/clickhouse
-      - ../../clickhouse/config.xml:/etc/clickhouse-server/config.d/cascata.xml:ro
-      - ../../clickhouse/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./clickhouse/config.xml:/etc/clickhouse-server/config.d/cascata.xml:ro
+      - ./clickhouse/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     deploy:
       resources:
         limits:
@@ -207,7 +207,7 @@ services:
     ports:
       - "8686:8686"    # Vector API
     volumes:
-      - ../../vector/vector.toml:/etc/vector/vector.toml:ro
+      - ./vector/vector.toml:/etc/vector/vector.toml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
       resources:
