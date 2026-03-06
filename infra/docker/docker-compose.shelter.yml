@@ -29,6 +29,7 @@ services:
   # ===========================================================================
   yugabytedb:
     image: cascata/yugabytedb:shared
+    pull_policy: never
     container_name: cascata-yugabytedb
     command: >
       bin/yugabyted start
