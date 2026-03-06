@@ -1,0 +1,7 @@
+{
+    "v3_use_raw_websocket_in_api": true,
+    "client_insecure": true,
+    "admin_password": "cascata_centrifugo_admin",
+    "admin_secret": "cascata_centrifugo_secret",
+    "api_key": "cascata_api_key_for_centrifugo"
+}

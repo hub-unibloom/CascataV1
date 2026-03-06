@@ -1,132 +1,98 @@
-  7b. cascata/yugabytedb:full (Cat.1 + pg_cron + PostGIS)
-  → Isto pode levar 15-25 minutos na primeira vez...
-  ⚠ Ram host detectada: 1905MB. Forçando MAKEFLAGS=-j2 para evitar OOM fatal do GCC.
-#11 exporting manifest list sha256:098b92487e76c0e4ebd532691cdb93a4c8d48907cbe259003304ec79944ec1d4 0.0s done
-#11 naming to docker.io/cascata/yugabytedb:full done
-#11 unpacking to docker.io/cascata/yugabytedb:full
-#11 unpacking to docker.io/cascata/yugabytedb:full 0.3s done
-#11 DONE 1.4s
-  ✔ cascata/yugabytedb:full construída
+[+] up 20/20
+ ✔ Image docker-control-plane         Built                                                                                                                                             417.9s
+ ✔ Image docker-gateway               Built                                                                                                                                             417.9s
+ ✔ Network docker_cascata-shelter     Created                                                                                                                                           0.1s
+ ✔ Volume docker_cascata-openbao-data Created                                                                                                                                           0.0s
+ ✔ Volume docker_cascata-rp-data      Created                                                                                                                                           0.0s
+ ✔ Volume docker_cascata-yb-data      Created                                                                                                                                           0.0s
+ ✔ Volume docker_cascata-vm-data      Created                                                                                                                                           0.0s
+ ✔ Volume docker_cascata-df-data      Created                                                                                                                                           0.0s
+ ✔ Volume docker_cascata-ch-data      Created                                                                                                                                           0.0s
+ ✔ Container cascata-dragonflydb      Healthy                                                                                                                                           7.4s
+ ✔ Container cascata-qdrant           Started                                                                                                                                           2.1s
+ ✘ Container cascata-clickhouse       Error dependency clickhouse failed to start                                                                                                       72.7s
+ ✔ Container cascata-redpanda         Healthy                                                                                                                                           6.7s
+ ✘ Container cascata-yugabytedb       Error dependency yugabytedb failed to start                                                                                                       20.1s
+ ✔ Container cascata-victoriametrics  Started                                                                                                                                           2.6s
+ ✔ Container cascata-openbao          Started                                                                                                                                           2.6s
+ ✔ Container cascata-centrifugo       Started                                                                                                                                           7.1s
+ ✔ Container cascata-vector           Created                                                                                                                                           0.1s
+ ✔ Container cascata-gateway          Created                                                                                                                                           0.1s
+ ✔ Container cascata-control-plane    Created                                                                                                                                           0.1s
+dependency failed to start: container cascata-yugabytedb is unhealthy
+[ec2-user@ip-172-26-14-28 ~]$ docker logs cascata-clickhouse --tail 30
+/entrypoint.sh: create new user 'cascata' instead 'default'
+Processing configuration file '/etc/clickhouse-server/config.xml'.
+Merging configuration file '/etc/clickhouse-server/config.d/cascata.xml'.
+Merging configuration file '/etc/clickhouse-server/config.d/docker_related_config.xml'.
+Logging warning to /var/log/clickhouse-server/clickhouse-server.log
+Logging errors to /var/log/clickhouse-server/clickhouse-server.err.log
+2026.03.06 19:24:39.832674 [ 82 ] {} <Warning> Application: Listen [0.0.0.0]:9009 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:9009 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.06 19:24:39.871007 [ 82 ] {} <Warning> Access(local_directory): File /var/lib/clickhouse/access/users.list doesn't exist
+2026.03.06 19:24:39.871203 [ 82 ] {} <Warning> Access(local_directory): Recovering lists in directory /var/lib/clickhouse/access/
+2026.03.06 19:24:39.888505 [ 82 ] {} <Warning> Context: Linux transparent hugepages are set to "always". Check /sys/kernel/mm/transparent_hugepage/enabled
+2026.03.06 19:24:39.899665 [ 82 ] {} <Warning> Context: Delay accounting is not enabled, OSIOWaitMicroseconds will not be gathered. You can enable it using `sudo sh -c 'echo 1 > /proc/sys/kernel/task_delayacct'` or by using sysctl.
+2026.03.06 19:24:39.967629 [ 82 ] {} <Error> Application: Code: 36. DB::Exception: The value of 'number_of_free_entries_in_pool_to_execute_mutation' setting (20) (default values are defined in <merge_tree> section of config.xml or the value can be specified per table in SETTINGS section of CREATE TABLE query) is greater than the value of 'background_pool_size'*'background_merges_mutations_concurrency_ratio' (4) (the value is defined in users.xml for default profile). This indicates incorrect configuration because mutations cannot work with these settings. (BAD_ARGUMENTS), Stack trace (when copying this message, always include the lines below):
 
+0. DB::Exception::Exception(DB::Exception::MessageMasked&&, int, bool) @ 0x000000001359985f
+1. DB::Exception::Exception(String&&, int, String, bool) @ 0x000000000ca41a4e
+2. DB::Exception::Exception(PreformattedMessage&&, int) @ 0x000000000ca41500
+3. DB::Exception::Exception<unsigned long const&, unsigned long&>(int, FormatStringHelperImpl<std::type_identity<unsigned long const&>::type, std::type_identity<unsigned long&>::type>, unsigned long const&, unsigned long&) @ 0x000000000ca51b6b
+4. DB::MergeTreeSettingsImpl::sanityCheck(unsigned long, bool, bool) const @ 0x000000001968e0c5
+5. DB::Server::main(std::vector<String, std::allocator<String>> const&) @ 0x000000001393e54c
+6. Poco::Util::Application::run() @ 0x000000001f1d66a6
+7. DB::Server::run() @ 0x0000000013925682
+8. mainEntryClickHouseServer(int, char**) @ 0x00000000139221d3
+9. main @ 0x000000000ca3987d
+10. ? @ 0x0000000000029d90
+11. ? @ 0x0000000000029e40
+12. _start @ 0x000000000770802e
+ (version 25.8.18.1 (official build))
+[ec2-user@ip-172-26-14-28 ~]$ docker logs cascata-clickhouse --tail 30
+/entrypoint.sh: create new user 'cascata' instead 'default'
+Processing configuration file '/etc/clickhouse-server/config.xml'.
+Merging configuration file '/etc/clickhouse-server/config.d/cascata.xml'.
+Merging configuration file '/etc/clickhouse-server/config.d/docker_related_config.xml'.
+Logging warning to /var/log/clickhouse-server/clickhouse-server.log
+Logging errors to /var/log/clickhouse-server/clickhouse-server.err.log
+2026.03.06 19:24:39.832674 [ 82 ] {} <Warning> Application: Listen [0.0.0.0]:9009 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:9009 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.06 19:24:39.871007 [ 82 ] {} <Warning> Access(local_directory): File /var/lib/clickhouse/access/users.list doesn't exist
+2026.03.06 19:24:39.871203 [ 82 ] {} <Warning> Access(local_directory): Recovering lists in directory /var/lib/clickhouse/access/
+2026.03.06 19:24:39.888505 [ 82 ] {} <Warning> Context: Linux transparent hugepages are set to "always". Check /sys/kernel/mm/transparent_hugepage/enabled
+2026.03.06 19:24:39.899665 [ 82 ] {} <Warning> Context: Delay accounting is not enabled, OSIOWaitMicroseconds will not be gathered. You can enable it using `sudo sh -c 'echo 1 > /proc/sys/kernel/task_delayacct'` or by using sysctl.
+2026.03.06 19:24:39.967629 [ 82 ] {} <Error> Application: Code: 36. DB::Exception: The value of 'number_of_free_entries_in_pool_to_execute_mutation' setting (20) (default values are defined in <merge_tree> section of config.xml or the value can be specified per table in SETTINGS section of CREATE TABLE query) is greater than the value of 'background_pool_size'*'background_merges_mutations_concurrency_ratio' (4) (the value is defined in users.xml for default profile). This indicates incorrect configuration because mutations cannot work with these settings. (BAD_ARGUMENTS), Stack trace (when copying this message, always include the lines below):
 
-  Imagens Cascata disponíveis:
-cascata/yugabytedb:full	2.74GB	2 seconds ago
-cascata/yugabytedb:shared	2.71GB	10 days ago
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  PASSO 8 — Subindo ambiente Shelter (modo desenvolvimento)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  → Verificando e baixando dependências do Docker Hub (Pre-flight pull)...
-[+] pull 11/11
- ✔ gateway         Skipped 0.0ss
- ✔ control-plane   Skipped 0.0ss
- ✔ Image cascat... Skipped 0.0ss
- ✔ Image timber... Pulled  16.3s
- ✔ Image docker... Pulled  22.5s
- ✔ Image qdrant... Pulled  17.9s
- ✔ Image quay.i... Pulled  18.9s
- ✔ Image victor... Pulled  3.7ss
- ✔ Image docker... Pulled  15.4s
- ✔ Image centri... Pulled  5.9ss
- ✔ Image clickh... Pulled  25.3s
-  → Iniciando serviços de infraestrutura...
-[+] Building 203.3s (39/41)     
- => [internal] load local  0.0s
- => => reading from  985B  0.0s
- => [gateway internal] lo  0.2s
- => => transferrin 1.81kB  0.0s
- => [control-plane intern  0.2s
- => => transferrin 1.57kB  0.0s
-
-.........
- => => exporting config s  0.0s
- => => exporting attestat  0.1s
- => => exporting manifest  0.0s
- => => naming to docker.i  0.0s
- => => unpacking to docke  0.6s
- => [control-plane] resol  0.0s
- => [gateway builder 6/7]  1.2s
- => ERROR [gateway builde  1.9s
-------
- > [gateway builder 7/7] RUN cargo build --release:
-0.326     Updating crates.io index
-0.860      Locking 232 packages to latest compatible versions
-0.863       Adding addr2line v0.25.1
-0.863       Adding adler2 v2.0.1
-0.866       Adding ahash v0.8.12
-0.867       Adding aho-corasick v1.1.4
-0.867       Adding alloc-no-stdlib v2.0.4
-0.867       Adding alloc-stdlib v0.2.2
-0.867       Adding allocator-api2 v0.2.21
-0.868       Adding anstream v0.6.21
-0.868       Adding anstyle v1.0.13
-0.868       Adding anstyle-parse v0.2.7
-0.869       Adding anstyle-query v1.1.5
-......
-....
-1.036       Adding zstd-safe v7.2.4
-1.037       Adding zstd-sys v2.0.16+zstd.1.5.7
-1.399    Compiling libz-ng-sys v1.1.24
-1.400    Compiling rustversion v1.0.22
-1.469 warning: libz-ng-sys@1.1.24: Compiler family detection failed due to error: ToolNotFound: failed to find tool "c++": No such file or directory (os error 2)
-1.469 error: failed to run custom build command for `libz-ng-sys v1.1.24`
-1.470 
-1.470 Caused by:
-1.470   process didn't exit successfully: `/build/target/release/build/libz-ng-sys-9ea2531443f9511a/build-script-cmake` (exit status: 101)
-1.470   --- stdout
-1.470   CMAKE_TOOLCHAIN_FILE_x86_64-unknown-linux-gnu = None
-1.470   CMAKE_TOOLCHAIN_FILE_x86_64_unknown_linux_gnu = None
-1.470   HOST_CMAKE_TOOLCHAIN_FILE = None
-1.470   CMAKE_TOOLCHAIN_FILE = None
-1.470   CMAKE_GENERATOR_x86_64-unknown-linux-gnu = None
-1.470   CMAKE_GENERATOR_x86_64_unknown_linux_gnu = None
-1.470   HOST_CMAKE_GENERATOR = None
-1.470   CMAKE_GENERATOR = None
-1.470   cargo:warning=Compiler family detection failed due to error: ToolNotFound: failed to find tool "c++": No such file or directory (os error 2)
-1.470   CMAKE_PREFIX_PATH_x86_64-unknown-linux-gnu = None
-1.470   CMAKE_PREFIX_PATH_x86_64_unknown_linux_gnu = None
-1.470   HOST_CMAKE_PREFIX_PATH = None
-1.470   CMAKE_PREFIX_PATH = None
-1.470   CMAKE_x86_64-unknown-linux-gnu = None
-1.470   CMAKE_x86_64_unknown_linux_gnu = None
-1.470   HOST_CMAKE = None
-1.470   CMAKE = None
-1.470   -- Using CMake version 3.25.1
-1.470   -- ZLIB_HEADER_VERSION: 1.3.1
-1.470   -- ZLIBNG_HEADER_VERSION: 2.3.3
-1.470   -- Configuring incomplete, errors occurred!
-1.470   See also "/build/target/release/build/libz-ng-sys-f28c44cdfcebb694/out/build/CMakeFiles/CMakeOutput.log".
-1.470 
-1.470   --- stderr
-1.470   running: cd "/build/target/release/build/libz-ng-sys-f28c44cdfcebb694/out/build" && CMAKE_PREFIX_PATH="" LC_ALL="C" "cmake" "/usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libz-ng-sys-1.1.24/src/zlib-ng" "-B" "/build/target/release/build/libz-ng-sys-f28c44cdfcebb694/out/build" "-DBUILD_SHARED_LIBS=OFF" "-DZLIB_COMPAT=OFF" "-DZLIB_ENABLE_TESTS=OFF" "-DWITH_GZFILEOP=ON" "-DCMAKE_INSTALL_LIBDIR=lib" "-DCMAKE_INSTALL_PREFIX=/build/target/release/build/libz-ng-sys-f28c44cdfcebb694/out" "-DCMAKE_C_FLAGS= -ffunction-sections -fdata-sections -fPIC -m64 -w" "-DCMAKE_C_COMPILER=/usr/bin/cc" "-DCMAKE_CXX_FLAGS= -ffunction-sections -fdata-sections -fPIC -m64 -w" "-DCMAKE_CXX_COMPILER=c++" "-DCMAKE_ASM_FLAGS= -ffunction-sections -fdata-sections -fPIC -m64 -w" "-DCMAKE_ASM_COMPILER=/usr/bin/cc" "-DCMAKE_BUILD_TYPE=Release"
-1.470   CMake Error: CMake was unable to find a build program corresponding to "Unix Makefiles".  CMAKE_MAKE_PROGRAM is not set.  You probably need to select a different build tool.
-1.470 
-1.470   thread 'main' panicked at /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cmake-0.1.57/src/lib.rs:1132:5:
-1.470 
-1.470   command did not execute successfully, got: exit status: 1
-1.470 
-1.470   build script failed, must exit now
-1.470   note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-1.470 warning: build failed, waiting for other jobs to finish...
-------
-[+] up 0/2
- ⠙ Image dock... Building 203.5s
- ⠙ Image dock... Building 203.5s
-Dockerfile:31
-
---------------------
-
-  29 |     # Copiar código real e compilar
-
-  30 |     COPY . .
-
-  31 | >>> RUN cargo build --release
-
-  32 |     
-
-  33 |     # Stage 2: Runtime — imagem mínima com apenas libs necessárias
-
---------------------
-
-target gateway: failed to solve: process "/bin/sh -c cargo build --release" did not complete successfully: exit code: 101
-
+0. DB::Exception::Exception(DB::Exception::MessageMasked&&, int, bool) @ 0x000000001359985f
+1. DB::Exception::Exception(String&&, int, String, bool) @ 0x000000000ca41a4e
+2. DB::Exception::Exception(PreformattedMessage&&, int) @ 0x000000000ca41500
+3. DB::Exception::Exception<unsigned long const&, unsigned long&>(int, FormatStringHelperImpl<std::type_identity<unsigned long const&>::type, std::type_identity<unsigned long&>::type>, unsigned long const&, unsigned long&) @ 0x000000000ca51b6b
+4. DB::MergeTreeSettingsImpl::sanityCheck(unsigned long, bool, bool) const @ 0x000000001968e0c5
+5. DB::Server::main(std::vector<String, std::allocator<String>> const&) @ 0x000000001393e54c
+6. Poco::Util::Application::run() @ 0x000000001f1d66a6
+7. DB::Server::run() @ 0x0000000013925682
+8. mainEntryClickHouseServer(int, char**) @ 0x00000000139221d3
+9. main @ 0x000000000ca3987d
+10. ? @ 0x0000000000029d90
+11. ? @ 0x0000000000029e40
+12. _start @ 0x000000000770802e
+ (version 25.8.18.1 (official build))
+[ec2-user@ip-172-26-14-28 ~]$ ^C
+[ec2-user@ip-172-26-14-28 ~]$ ^C
+[ec2-user@ip-172-26-14-28 ~]$ ---
+-bash: ---: command not found
+[ec2-user@ip-172-26-14-28 ~]$ docker logs cascata-yugabytedb --tail 30
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
