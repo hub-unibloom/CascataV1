@@ -56,7 +56,7 @@ func (cb *CircuitBreaker) ProbeRecovery(ctx context.Context, orch *Orchestrator)
 	if cb.state == StateOpen && time.Since(cb.lastCheck) > 30*time.Second {
 		cb.state = StateHalfOpen
 		// Faz ping real na base
-		if err := orch.adminDB.PingContext(ctx); err == nil {
+		if err := orch.PingHealth(ctx); err == nil {
 			cb.state = StateClosed
 			cb.failureCount = 0
 			notifyPingora(cb.instanceID, true)

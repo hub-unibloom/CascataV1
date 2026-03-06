@@ -14,13 +14,13 @@
 
     <!-- Limites de query mudados para o users.xml ou omitidos por default -->
 
-    <!-- Single node: desabilitar replicação -->
-    <interserver_http_port>9009</interserver_http_port>
+    <!-- Network -->
+    <listen_host>0.0.0.0</listen_host>
 
     <!-- Performance tuning para single node -->
     <max_concurrent_queries>20</max_concurrent_queries>
-    <background_pool_size>2</background_pool_size>
-    <background_schedule_pool_size>2</background_schedule_pool_size>
+    <background_pool_size>16</background_pool_size>
+    <background_schedule_pool_size>16</background_schedule_pool_size>
 
     <!-- Merge tree settings -->
     <merge_tree>

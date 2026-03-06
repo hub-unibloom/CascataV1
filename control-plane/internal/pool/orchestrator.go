@@ -4,19 +4,22 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sync"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-// Orchestrator monitora pools transicionando de PgCat para YSQL Connection Manager.
+// Orchestrator gerencia configurações de pools virtuais para o YSQL Connection Manager nativo.
 type Orchestrator struct {
 	// YSQL CM gerencia a própria conexão usando parâmetros do servidor.
+	healthDSN string // DSN para health probes ao YugabyteDB (Req-3.5.11)
 }
 
 // NewOrchestrator cria uma nova instância de monitoramento.
-func NewOrchestrator(dsn string) (*Orchestrator, error) {
+func NewOrchestrator(healthDSN string) (*Orchestrator, error) {
 	// A responsabilidade de manter pools agora é nativa do YSQL CM.
-	return &Orchestrator{}, nil
+	return &Orchestrator{healthDSN: healthDSN}, nil
 }
 
 // Close libera a engine.
@@ -65,7 +68,7 @@ func (o *Orchestrator) UpdatePool(ctx context.Context, tenantID string, config P
 	return nil
 }
 
-// RemovePool descarta um pool e o remove do pgcat
+// RemovePool descarta a configuração de pool de um tenant
 func (o *Orchestrator) RemovePool(ctx context.Context, tenantID string) error {
 	if err := removeConfig(tenantID); err != nil {
 		return fmt.Errorf("erro removendo a configuração do pool para o tenant %s: %w", tenantID, err)
@@ -96,8 +99,20 @@ func (o *Orchestrator) HandlePoolFailure(ctx context.Context) {
 	fmt.Println("2. Instruindo Pingora Router para bypass fallback")
 }
 
-// Funções de helper fictícias nesta camada abstracta representando a persistência no arquivo de infra.
-// Em cenários reais onde pgcat exponha HTTP nativo, substituiríamos essa re-geração de TOML por requests HTTP local.
+// Funções stub de persistência — serão implementadas com queries ao YugabyteDB
+// quando o Control Plane for integrado ao banco (pool_configs table, migration 001).
 func persistConfig(tenantID string, cfg PoolConfig) error { return nil }
 func updateConfig(tenantID string, cfg PoolConfig) error  { return nil }
 func removeConfig(tenantID string) error                  { return nil }
+
+// PingHealth faz um probe efêmero ao YugabyteDB via YSQL CM (Req-3.5.11).
+// Conexão efêmera: aberta, ping, fechada. Sem pool permanente — o YSQL CM
+// nativo já faz o pooling, e o probe acontece no máximo a cada 30s.
+func (o *Orchestrator) PingHealth(ctx context.Context) error {
+	db, err := sql.Open("pgx", o.healthDSN)
+	if err != nil {
+		return fmt.Errorf("PingHealth: open: %w", err)
+	}
+	defer db.Close()
+	return db.PingContext(ctx)
+}
