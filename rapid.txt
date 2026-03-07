@@ -22,18 +22,18 @@ echo "=== 2. CLICKHOUSE — LOGS NATOS ==="
 echo "========================================="
 docker logs cascata-clickhouse --tail 100
 
-echo "========================================="
-echo "=== 3. YUGABYTEDB — DIAGNÓSTICO PROFUNDO ==="
-echo "========================================="
-echo "--- a) Motivo da morte do container (Docker Inspect OOM/CGroup) ---"
-docker inspect cascata-yugabytedb --format='{{json .State}}' | grep -o '"OOMKilled":[^,]*'
-docker inspect cascata-yugabytedb --format='{{json .State.ExitCode}}'
+    echo "========================================="
+    echo "=== 3. YUGABYTEDB — DIAGNÓSTICO PROFUNDO ==="
+    echo "========================================="
+    echo "--- a) Motivo da morte do container (Docker Inspect OOM/CGroup) ---"
+    docker inspect cascata-yugabytedb --format='{{json .State}}' | grep -o '"OOMKilled":[^,]*'
+    docker inspect cascata-yugabytedb --format='{{json .State.ExitCode}}'
 
-echo "--- b) Logs do Wrapper Python (Stdout/Stderr) ---"
-docker logs cascata-yugabytedb --tail 50
+    echo "--- b) Logs do Wrapper Python (Stdout/Stderr) ---"
+    docker logs cascata-yugabytedb --tail 50
 
-echo "--- c) Logs do Daemon YB-MASTER Interno ---"
-docker exec cascata-yugabytedb bash -c "cat /root/var/log/yugabyte/yb-master.ERROR 2>/dev/null || cat /home/yugabyte/yb_data/yb-data/master/logs/yb-master.ERROR 2>/dev/null" | tail -50
+    echo "--- c) Logs do Daemon YB-MASTER Interno ---"
+    docker exec cascata-yugabytedb bash -c "cat /root/var/log/yugabyte/yb-master.ERROR 2>/dev/null || cat /home/yugabyte/yb_data/yb-data/master/logs/yb-master.ERROR 2>/dev/null" | tail -50
 
-echo "--- d) Logs do Daemon YB-TSERVER Interno ---"
-docker exec cascata-yugabytedb bash -c "cat /root/var/log/yugabyte/yb-tserver.ERROR 2>/dev/null || cat /home/yugabyte/yb_data/yb-data/tserver/logs/yb-tserver.ERROR 2>/dev/null" | tail -50
+    echo "--- d) Logs do Daemon YB-TSERVER Interno ---"
+    docker exec cascata-yugabytedb bash -c "cat /root/var/log/yugabyte/yb-tserver.ERROR 2>/dev/null || cat /home/yugabyte/yb_data/yb-data/tserver/logs/yb-tserver.ERROR 2>/dev/null" | tail -50

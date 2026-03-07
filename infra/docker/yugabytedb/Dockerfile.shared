@@ -33,9 +33,7 @@ LABEL cascata.extensions.cat2="pg_cron"
 # -------------------------------------------------------
 
 # Configurar shared_preload_libraries
-# pg_cron e pgaudit precisam estar no preload para funcionar
-ENV YB_TSERVER_FLAGS="ysql_pg_conf_csv=\"shared_preload_libraries='pg_cron,pg_stat_statements,pgaudit'\""
-
+# Agora delegado para o docker-compose através de volume postgresql.conf
 # Nenhuma ferramenta de compilação presente neste stage.
 
 # O entrypoint do YugabyteDB é herdado da imagem base
