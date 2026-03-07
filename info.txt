@@ -1,0 +1,7 @@
+E encontrou pg_cron--1.6.sql e pg_cron.control já presentes na imagem base. O YugabyteDB a partir das versões recentes já pré-compila e empacota o pg_cron nativamente. Inclusive encontrou vector.control (pgvector) também.
+A conclusão que chegamos:
+Todo o stage de compilação do Dockerfile.shared que clonava o repositório citusdata/pg_cron e rodava make era código morto — além de falhar com exit code 2 por causa do YB_SRC_ROOT não existir no container runtime.
+Removemos o stage de compilação do Dockerfile.shared. A imagem ficou mais simples — apenas herda a base do YugabyteDB e configura o shared_preload_libraries.
+Portanto no --ysql_pg_conf_csv você pode e deve manter o pg_cron:
+yaml- --ysql_pg_conf_csv=shared_preload_libraries='pg_cron,pg_stat_statements,pgaudit'
+O pg_cron já está lá — você só precisa carregá-lo no shared_preload_libraries para ativá-lo. Não precisa compilar, não precisa instalar, só declarar o preload.

@@ -1,7 +1,10 @@
 Executo isso sempre após o erro, assim garantimos que não fique nenhum lixo para trás.
 
 ./cleanup.sh --nuke
-rm -rf cascataV1
+rm -rf 
+
+
+
 ./install.sh
 
 

@@ -34,7 +34,7 @@ sudo dnf install -y nano
 rm install.sh
 nano install.sh
 chmod +x install.sh
-./install.sh
 echo "Preparação concluída. O servidor reiniciará em 5 segundos."
 sleep 7
 sudo reboot
+

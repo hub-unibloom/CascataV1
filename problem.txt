@@ -1,77 +1,255 @@
 #Ambiente de extração dos logs da VPS.
 #Jamais execute comandos de instalação nesta maquina dde desenvolvimento, você não tem acesso a VPS  e o computador local não é ambiente para testes, domente a VPS que vc não tema acesso direto.
 
-#Problema encontrado:
-
+#Problema encontrado na vpss de 2g:
 [+] up 20/20
- ✔ Image docker-control-plane         Built                                                                                                                                                                                                                              1926.4s
- ✔ Image docker-gateway               Built                                                                                                                                                                                                                              1926.4s
- ✔ Network docker_cascata-shelter     Created                                                                                                                                                                                                                            0.4s
+ ✔ Image docker-control-plane         Built                                                                                                                                                                                                                              1986.3s
+ ✔ Image docker-gateway               Built                                                                                                                                                                                                                              1986.3s
+ ✔ Network docker_cascata-shelter     Created                                                                                                                                                                                                                            0.1s
+ ✔ Volume docker_cascata-vm-data      Created                                                                                                                                                                                                                            0.0s
+ ✔ Volume docker_cascata-df-data      Created                                                                                                                                                                                                                            0.0s
  ✔ Volume docker_cascata-ch-data      Created                                                                                                                                                                                                                            0.0s
  ✔ Volume docker_cascata-yb-data      Created                                                                                                                                                                                                                            0.0s
  ✔ Volume docker_cascata-openbao-data Created                                                                                                                                                                                                                            0.0s
  ✔ Volume docker_cascata-rp-data      Created                                                                                                                                                                                                                            0.0s
- ✔ Volume docker_cascata-df-data      Created                                                                                                                                                                                                                            0.0s
- ✔ Volume docker_cascata-vm-data      Created                                                                                                                                                                                                                            0.0s
- ✔ Container cascata-redpanda         Healthy                                                                                                                                                                                                                            16.0s
- ✘ Container cascata-clickhouse       Error dependency clickhouse failed to start                                                                                                                                                                                        119.0s
- ✔ Container cascata-dragonflydb      Healthy                                                                                                                                                                                                                            15.0s
- ✔ Container cascata-openbao          Started                                                                                                                                                                                                                            8.4s
- ✔ Container cascata-qdrant           Started                                                                                                                                                                                                                            10.0s
- ✘ Container cascata-yugabytedb       Error dependency yugabytedb failed to start                                                                                                                                                                                        181.1s
- ✔ Container cascata-victoriametrics  Started                                                                                                                                                                                                                            8.9s
- ✔ Container cascata-centrifugo       Started                                                                                                                                                                                                                            18.7s
- ✔ Container cascata-vector           Created                                                                                                                                                                                                                            0.6s
- ✔ Container cascata-control-plane    Created                                                                                                                                                                                                                            0.5s
- ✔ Container cascata-gateway          Created                                                                                                                                                                                                                            0.6s
+ ✘ Container cascata-yugabytedb       Error dependency yugabytedb failed to start                                                                                                                                                                                        150.2s
+ ✔ Container cascata-openbao          Started                                                                                                                                                                                                                            1.5s
+ ✔ Container cascata-victoriametrics  Started                                                                                                                                                                                                                            1.2s
+ ✔ Container cascata-qdrant           Started                                                                                                                                                                                                                            1.3s
+ ✔ Container cascata-redpanda         Healthy                                                                                                                                                                                                                            10.4s
+ ✔ Container cascata-dragonflydb      Healthy                                                                                                                                                                                                                            9.5s
+ ✘ Container cascata-clickhouse       Error dependency clickhouse failed to start                                                                                                                                                                                        113.5s
+ ✔ Container cascata-centrifugo       Started                                                                                                                                                                                                                            15.1s
+ ✔ Container cascata-vector           Created                                                                                                                                                                                                                            0.1s
+ ✔ Container cascata-control-plane    Created                                                                                                                                                                                                                            0.1s
+ ✔ Container cascata-gateway          Created                                                                                                                                                                                                                            0.1s
 dependency failed to start: container cascata-clickhouse is unhealthy
-[ec2-user@ip-172-26-8-16 ~]$ 
-[ec2-user@ip-172-26-8-16 ~]$ 
-[ec2-user@ip-172-26-8-16 ~]$ 
-[ec2-user@ip-172-26-8-16 ~]$ 
-[ec2-user@ip-172-26-8-16 ~]$ 
-[ec2-user@ip-172-26-8-16 ~]$ 
-echo "---clickhouse logs---"
+[ec2-user@ip-172-26-8-16 ~]$ echo "========================================="
+echo "=== 1. STATUS E CONSUMO DO DEPLOY ==="
+echo "========================================="
+free -m
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "yugabyte|clickhouse|redpanda"
+docker stats --no-stream | grep -E "yugabyte|clickhouse|redpanda"
+
+echo "========================================="
+echo "=== 2. CLICKHOUSE — LOGS NATOS ==="
+echo "========================================="
 docker logs cascata-clickhouse --tail 100
 
-echo "---LOGS YUGABYTE---"
-docker logs cascata-yugabytedb --tail 100
+echo "========================================="
+echo "=== 3. YUGABYTEDB — DIAGNÓSTICO PROFUNDO ==="
+echo "========================================="
+echo "--- a) Motivo da morte do container (Docker Inspect OOM/CGroup) ---"
+docker inspect cascata-yugabytedb --format='{{json .State}}' | grep -o '"OOMKilled":[^,]*'
+docker inspect cascata-yugabytedb --format='{{json .State.ExitCode}}'
 
+echo "--- b) Logs do Wrapper Python (Stdout/Stderr) ---"
+docker logs cascata-yugabytedb --tail 50
 
-# O log real do YugabyteDB não está no stdout — está dentro do container
-docker exec cascata-yugabytedb cat /root/var/log/yugabyte/yugabyted.log 2>/dev/null | tail -50
-echo "---PARTE UM DO YUGABYTE---"
+echo "--- c) Logs do Daemon YB-MASTER Interno ---"
+docker exec cascata-yugabytedb bash -c "cat /root/var/log/yugabyte/yb-master.ERROR 2>/dev/null || cat /home/yugabyte/yb_data/yb-data/master/logs/yb-master.ERROR 2>/dev/null" | tail -50
 
-# Alternativa — logs do tserver que é onde falha de fato
-docker exec cascata-yugabytedb cat /root/var/log/yugabyte/yb-tserver.ERROR 2>/dev/null | tail -30
-echo "---PARTE DOIS DO YUGABYTE---"
-
-# Ver também se é problema de memória
-docker exec cascata-yugabytedb cat /root/var/log/yugabyte/yb-master.ERROR 2>/dev/null | tail -20
-echo "---PARTE TRÊS DO YUGABYTE---"
-
-# RAM disponível no momento da falha
-free -m
-echo "---PARTE QUATRO DO YUGABYTE---"
-
----clickhouse logs---
+echo "--- d) Logs do Daemon YB-TSERVER Interno ---"
+docker exec cascata-yugabytedb bash -c "cat /root/var/log/yugabyte/yb-tserver.ERROR 2>/dev/null || cat /home/yugabyte/yb_data/yb-data/tserver/logs/yb-tserver.ERROR 2>/dev/null" | tail -50
+=========================================
+=== 1. STATUS E CONSUMO DO DEPLOY ===
+=========================================
+               total        used        free      shared  buff/cache   available
+Mem:            1905        1081          68           6         933         824
+Swap:              0           0           0
+cascata-yugabytedb        Up 9 seconds (health: starting)   6379/tcp, 0.0.0.0:5433->5433/tcp, [::]:5433->5433/tcp, 7000/tcp, 0.0.0.0:7100->7100/tcp, [::]:7100->7100/tcp, 7200/tcp, 9042/tcp, 9100/tcp, 10100/tcp, 11000/tcp, 0.0.0.0:9000->9000/tcp, [::]:9000->9000/tcp, 0.0.0.0:15433->15433/tcp, [::]:15433->15433/tcp, 12000/tcp
+cascata-clickhouse        Up 4 minutes (unhealthy)          0.0.0.0:8123->8123/tcp, [::]:8123->8123/tcp, 9009/tcp, 0.0.0.0:9001->9000/tcp, [::]:9001->9000/tcp
+cascata-redpanda          Up 4 minutes (healthy)            0.0.0.0:8081-8082->8081-8082/tcp, [::]:8081-8082->8081-8082/tcp, 0.0.0.0:9092->9092/tcp, [::]:9092->9092/tcp, 0.0.0.0:9644->9644/tcp, [::]:9644->9644/tcp
+de49f145eab6   cascata-clickhouse        23.94%    266MiB / 384MiB       69.28%    3.22kB / 126B     6.75GB / 23MB     182
+2e798fe47d10   cascata-redpanda          36.54%    100.1MiB / 384MiB     26.07%    3.43kB / 126B     559MB / 180kB     3
+c5998a1f606a   cascata-yugabytedb        8.12%     19.33MiB / 1.172GiB   1.61%     516B / 126B       3.52MB / 4.1kB    6
+=========================================
+=== 2. CLICKHOUSE — LOGS NATOS ===
+=========================================
 /entrypoint.sh: create new user 'cascata' instead 'default'
 Processing configuration file '/etc/clickhouse-server/config.xml'.
 Merging configuration file '/etc/clickhouse-server/config.d/cascata.xml'.
 Merging configuration file '/etc/clickhouse-server/config.d/docker_related_config.xml'.
 Logging warning to /var/log/clickhouse-server/clickhouse-server.log
 Logging errors to /var/log/clickhouse-server/clickhouse-server.err.log
-2026.03.07 01:01:34.728761 [ 87 ] {} <Warning> Application: Listen [0.0.0.0]:9009 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:9009 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
-2026.03.07 01:01:35.094439 [ 87 ] {} <Warning> Access(local_directory): File /var/lib/clickhouse/access/users.list doesn't exist
-2026.03.07 01:01:35.096295 [ 87 ] {} <Warning> Access(local_directory): Recovering lists in directory /var/lib/clickhouse/access/
-2026.03.07 01:01:35.120019 [ 87 ] {} <Warning> Context: Linux transparent hugepages are set to "always". Check /sys/kernel/mm/transparent_hugepage/enabled
-2026.03.07 01:01:35.122706 [ 87 ] {} <Warning> Context: Linux threads max count is too low. Check /proc/sys/kernel/threads-max
-2026.03.07 01:01:35.124067 [ 87 ] {} <Warning> Context: Delay accounting is not enabled, OSIOWaitMicroseconds will not be gathered. You can enable it using `sudo sh -c 'echo 1 > /proc/sys/kernel/task_delayacct'` or by using sysctl.
-2026.03.07 01:01:35.124468 [ 87 ] {} <Warning> Context: Available memory at server startup is too low (2GiB).
-2026.03.07 01:01:36.574849 [ 87 ] {} <Warning> Application: Listen [0.0.0.0]:8123 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:8123 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
-2026.03.07 01:01:36.574955 [ 87 ] {} <Warning> Application: Listen [0.0.0.0]:9000 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:9000 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
-2026.03.07 01:01:36.575120 [ 87 ] {} <Warning> Application: Listen [0.0.0.0]:9004 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:9004 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
-2026.03.07 01:01:36.575286 [ 87 ] {} <Warning> Application: Listen [0.0.0.0]:9005 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:9005 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:11:35.747823 [ 88 ] {} <Warning> Access(local_directory): File /var/lib/clickhouse/access/users.list doesn't exist
+2026.03.07 02:11:35.747984 [ 88 ] {} <Warning> Access(local_directory): Recovering lists in directory /var/lib/clickhouse/access/
+2026.03.07 02:11:35.796774 [ 88 ] {} <Warning> Context: Linux transparent hugepages are set to "always". Check /sys/kernel/mm/transparent_hugepage/enabled
+2026.03.07 02:11:35.797792 [ 88 ] {} <Warning> Context: Linux threads max count is too low. Check /proc/sys/kernel/threads-max
+2026.03.07 02:11:35.798377 [ 88 ] {} <Warning> Context: Delay accounting is not enabled, OSIOWaitMicroseconds will not be gathered. You can enable it using `sudo sh -c 'echo 1 > /proc/sys/kernel/task_delayacct'` or by using sysctl.
+2026.03.07 02:11:35.798807 [ 88 ] {} <Warning> Context: Available memory at server startup is too low (2GiB).
+2026.03.07 02:11:37.069850 [ 88 ] {} <Warning> Application: Listen [0.0.0.0]:8123 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:8123 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:11:37.070742 [ 88 ] {} <Warning> Application: Listen [0.0.0.0]:9000 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:9000 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:11:37.071149 [ 88 ] {} <Warning> Application: Listen [0.0.0.0]:9004 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:9004 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:11:37.071404 [ 88 ] {} <Warning> Application: Listen [0.0.0.0]:9005 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:9005 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+
+/entrypoint.sh: create database 'cascata_logs'
+2026.03.07 02:11:37.895803 [ 102 ] {} <Error> StaticRequestHandler: Code: 210. DB::NetException: Connection reset by peer, while writing to socket (127.0.0.1:8123 -> 127.0.0.1:53586). (NETWORK_ERROR), Stack trace (when copying this message, always include the lines below):
+
+0. DB::Exception::Exception(DB::Exception::MessageMasked&&, int, bool) @ 0x000000001359985f
+1. DB::Exception::Exception(String&&, int, String, bool) @ 0x000000000ca41a4e
+2. DB::NetException::NetException<String, String, String>(int, FormatStringHelperImpl<std::type_identity<String>::type, std::type_identity<String>::type, std::type_identity<String>::type>, String&&, String&&, String&&) @ 0x00000000137c7d73
+3. DB::WriteBufferFromPocoSocket::socketSendBytes(char const*, unsigned long) @ 0x00000000137c780a
+4. DB::WriteBufferFromHTTPServerResponse::nextImpl() @ 0x0000000019c9cc99
+5. DB::WriteBuffer::next() @ 0x000000000ca50c1e
+6. DB::WriteBufferFromHTTPServerResponse::finalizeImpl() @ 0x0000000019c9d59e
+7. DB::WriteBuffer::finalize() @ 0x00000000136abf90
+8. DB::StaticRequestHandler::handleRequest(DB::HTTPServerRequest&, DB::HTTPServerResponse&, StrongTypedef<unsigned long, ProfileEvents::EventTag> const&) @ 0x0000000019c5b20b
+9. DB::HTTPServerConnection::run() @ 0x0000000019c93ba0
+10. Poco::Net::TCPServerConnection::start() @ 0x000000001f1b62c7
+11. Poco::Net::TCPServerDispatcher::run() @ 0x000000001f1b6759
+12. Poco::PooledThread::run() @ 0x000000001f17cdc7
+13. Poco::ThreadImpl::runnableEntry(void*) @ 0x000000001f17b1c1
+14. ? @ 0x0000000000094ac3
+15. ? @ 0x0000000000125a84
+ (version 25.8.18.1 (official build))
+2026.03.07 02:11:38.138219 [ 102 ] {} <Error> bool DB::WriteBufferFromHTTPServerResponse::cancelWithException(HTTPServerRequest &, int, const std::string &, WriteBuffer *): Failed to send exception to the response write buffer.: Code: 236. DB::Exception: Write buffer has been canceled. (ABORTED), Stack trace (when copying this message, always include the lines below):
+
+0. DB::Exception::Exception(DB::Exception::MessageMasked&&, int, bool) @ 0x000000001359985f
+1. DB::Exception::Exception(String&&, int, String, bool) @ 0x000000000ca41a4e
+2. DB::Exception::Exception(PreformattedMessage&&, int) @ 0x000000000ca41500
+3. DB::Exception::Exception<>(int, FormatStringHelperImpl<>) @ 0x000000000ca505ab
+4. DB::WriteBufferFromHTTPServerResponse::cancelWithException(DB::HTTPServerRequest&, int, String const&, DB::WriteBuffer*) @ 0x0000000019c9db22
+5. DB::StaticRequestHandler::handleRequest(DB::HTTPServerRequest&, DB::HTTPServerResponse&, StrongTypedef<unsigned long, ProfileEvents::EventTag> const&) @ 0x0000000019c5c003
+6. DB::HTTPServerConnection::run() @ 0x0000000019c93ba0
+7. Poco::Net::TCPServerConnection::start() @ 0x000000001f1b62c7
+8. Poco::Net::TCPServerDispatcher::run() @ 0x000000001f1b6759
+9. Poco::PooledThread::run() @ 0x000000001f17cdc7
+10. Poco::ThreadImpl::runnableEntry(void*) @ 0x000000001f17b1c1
+11. ? @ 0x0000000000094ac3
+12. ? @ 0x0000000000125a84
+ (version 25.8.18.1 (official build))
+/entrypoint.sh: running /docker-entrypoint-initdb.d/init-db.sql
+
+
+Processing configuration file '/etc/clickhouse-server/config.xml'.
+Merging configuration file '/etc/clickhouse-server/config.d/cascata.xml'.
+Merging configuration file '/etc/clickhouse-server/config.d/docker_related_config.xml'.
+Logging warning to /var/log/clickhouse-server/clickhouse-server.log
+Logging errors to /var/log/clickhouse-server/clickhouse-server.err.log
+2026.03.07 02:12:12.087887 [ 1 ] {} <Warning> Context: Linux transparent hugepages are set to "always". Check /sys/kernel/mm/transparent_hugepage/enabled
+2026.03.07 02:12:12.089126 [ 1 ] {} <Warning> Context: Linux threads max count is too low. Check /proc/sys/kernel/threads-max
+2026.03.07 02:12:12.089499 [ 1 ] {} <Warning> Context: Delay accounting is not enabled, OSIOWaitMicroseconds will not be gathered. You can enable it using `sudo sh -c 'echo 1 > /proc/sys/kernel/task_delayacct'` or by using sysctl.
+2026.03.07 02:12:12.089642 [ 1 ] {} <Warning> Context: Available memory at server startup is too low (2GiB).
+2026.03.07 02:12:13.953123 [ 1 ] {} <Warning> Application: Listen [::]:8123 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:12:13.953717 [ 1 ] {} <Warning> Application: Listen [::]:9000 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:12:13.953935 [ 1 ] {} <Warning> Application: Listen [::]:9004 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:12:13.954092 [ 1 ] {} <Warning> Application: Listen [::]:9005 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+=========================================
+=== 3. YUGABYTEDB — DIAGNÓSTICO PROFUNDO ===
+=========================================
+--- a) Motivo da morte do container (Docker Inspect OOM/CGroup) ---
+"OOMKilled":false
+0
+--- b) Logs do Wrapper Python (Stdout/Stderr) ---
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+--- c) Logs do Daemon YB-MASTER Interno ---
+--- d) Logs do Daemon YB-TSERVER Interno ---
+[ec2-user@ip-172-26-8-16 ~]$ 
+
+
+
+
+--------Agor daqui apra baixo são logs de uma vps de 4g de ram, ipv6 habilitado desde de aa criação, postas 22,80 e 443 abertas, o sistema passou pelo mesmo processo conehcido primeiro foi executado o "/home/cocorico/projetossz/Cascata-V1/pre-feito.txt" ddepois da reinicialização foi executado o install.sh:
+
+
+[+] up 20/20
+ ✔ Image docker-gateway               Built                                                                                                                                                                                                                              1824.8s
+ ✔ Image docker-control-plane         Built                                                                                                                                                                                                                              1824.8s
+ ✔ Network docker_cascata-shelter     Created                                                                                                                                                                                                                            0.0s
+ ✔ Volume docker_cascata-df-data      Created                                                                                                                                                                                                                            0.0s
+ ✔ Volume docker_cascata-yb-data      Created                                                                                                                                                                                                                            0.0s
+ ✔ Volume docker_cascata-vm-data      Created                                                                                                                                                                                                                            0.0s
+ ✔ Volume docker_cascata-rp-data      Created                                                                                                                                                                                                                            0.0s
+ ✔ Volume docker_cascata-ch-data      Created                                                                                                                                                                                                                            0.0s
+ ✔ Volume docker_cascata-openbao-data Created                                                                                                                                                                                                                            0.0s
+ ✔ Container cascata-dragonflydb      Healthy                                                                                                                                                                                                                            23.9s
+ ✔ Container cascata-victoriametrics  Started                                                                                                                                                                                                                            23.4s
+ ✔ Container cascata-clickhouse       Healthy                                                                                                                                                                                                                            28.7s
+ ✔ Container cascata-redpanda         Healthy                                                                                                                                                                                                                            23.9s
+ ✘ Container cascata-yugabytedb       Error dependency yugabytedb failed to start                                                                                                                                                                                        378.5s
+ ✔ Container cascata-openbao          Started                                                                                                                                                                                                                            23.4s
+ ✔ Container cascata-qdrant           Started                                                                                                                                                                                                                            23.4s
+ ✔ Container cascata-centrifugo       Started                                                                                                                                                                                                                            25.3s
+ ✔ Container cascata-vector           Started                                                                                                                                                                                                                            31.9s
+ ✔ Container cascata-control-plane    Created                                                                                                                                                                                                                            0.1s
+ ✔ Container cascata-gateway          Created                                                                                                                                                                                                                            0.1s
+dependency failed to start: container cascata-yugabytedb is unhealthy
+[ec2-user@ip-172-26-12-116 ~]$ echo "========================================="
+echo "=== 1. STATUS E CONSUMO DO DEPLOY ==="
+echo "========================================="
+free -m
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "yugabyte|clickhouse|redpanda"
+docker stats --no-stream | grep -E "yugabyte|clickhouse|redpanda"
+
+echo "========================================="
+echo "=== 2. CLICKHOUSE — LOGS NATOS ==="
+echo "========================================="
+docker logs cascata-clickhouse --tail 100
+
+echo "========================================="
+echo "=== 3. YUGABYTEDB — DIAGNÓSTICO PROFUNDO ==="
+echo "========================================="
+echo "--- a) Motivo da morte do container (Docker Inspect OOM/CGroup) ---"
+docker inspect cascata-yugabytedb --format='{{json .State}}' | grep -o '"OOMKilled":[^,]*'
+docker inspect cascata-yugabytedb --format='{{json .State.ExitCode}}'
+
+echo "--- b) Logs do Wrapper Python (Stdout/Stderr) ---"
+docker logs cascata-yugabytedb --tail 50
+
+echo "--- c) Logs do Daemon YB-MASTER Interno ---"
+docker exec cascata-yugabytedb bash -c "cat /root/var/log/yugabyte/yb-master.ERROR 2>/dev/null || cat /home/yugabyte/yb_data/yb-data/master/logs/yb-master.ERROR 2>/dev/null" | tail -50
+
+echo "--- d) Logs do Daemon YB-TSERVER Interno ---"
+docker exec cascata-yugabytedb bash -c "cat /root/var/log/yugabyte/yb-tserver.ERROR 2>/dev/null || cat /home/yugabyte/yb_data/yb-data/tserver/logs/yb-tserver.ERROR 2>/dev/null" | tail -50
+=========================================
+=== 1. STATUS E CONSUMO DO DEPLOY ===
+=========================================
+               total        used        free      shared  buff/cache   available
+Mem:            3831        1663         262           9        2197        2167
+Swap:              0           0           0
+cascata-yugabytedb        Up 7 seconds (health: starting)   6379/tcp, 0.0.0.0:5433->5433/tcp, [::]:5433->5433/tcp, 7000/tcp, 0.0.0.0:7100->7100/tcp, [::]:7100->7100/tcp, 7200/tcp, 9042/tcp, 9100/tcp, 10100/tcp, 11000/tcp, 0.0.0.0:9000->9000/tcp, [::]:9000->9000/tcp, 0.0.0.0:15433->15433/tcp, [::]:15433->15433/tcp, 12000/tcp
+cascata-clickhouse        Up 8 minutes (unhealthy)          0.0.0.0:8123->8123/tcp, [::]:8123->8123/tcp, 9009/tcp, 0.0.0.0:9001->9000/tcp, [::]:9001->9000/tcp
+cascata-redpanda          Up 8 minutes (healthy)            0.0.0.0:8081-8082->8081-8082/tcp, [::]:8081-8082->8081-8082/tcp, 0.0.0.0:9092->9092/tcp, [::]:9092->9092/tcp, 0.0.0.0:9644->9644/tcp, [::]:9644->9644/tcp
+d3bdddca9ad1   cascata-clickhouse        1.87%     288.5MiB / 384MiB   75.12%    4.77kB / 126B     21.8GB / 27.4MB   181
+527af235df29   cascata-redpanda          0.22%     80.68MiB / 384MiB   21.01%    4.73kB / 126B     248MB / 180kB     3
+=========================================
+=== 2. CLICKHOUSE — LOGS NATOS ===
+=========================================
+/entrypoint.sh: create new user 'cascata' instead 'default'
+Processing configuration file '/etc/clickhouse-server/config.xml'.
+Merging configuration file '/etc/clickhouse-server/config.d/cascata.xml'.
+Merging configuration file '/etc/clickhouse-server/config.d/docker_related_config.xml'.
+Logging warning to /var/log/clickhouse-server/clickhouse-server.log
+Logging errors to /var/log/clickhouse-server/clickhouse-server.err.log
+2026.03.07 02:30:06.137713 [ 82 ] {} <Warning> Access(local_directory): File /var/lib/clickhouse/access/users.list doesn't exist
+2026.03.07 02:30:06.137888 [ 82 ] {} <Warning> Access(local_directory): Recovering lists in directory /var/lib/clickhouse/access/
+2026.03.07 02:30:06.148361 [ 82 ] {} <Warning> Context: Linux transparent hugepages are set to "always". Check /sys/kernel/mm/transparent_hugepage/enabled
+2026.03.07 02:30:06.153022 [ 82 ] {} <Warning> Context: Delay accounting is not enabled, OSIOWaitMicroseconds will not be gathered. You can enable it using `sudo sh -c 'echo 1 > /proc/sys/kernel/task_delayacct'` or by using sysctl.
+2026.03.07 02:30:07.100931 [ 82 ] {} <Warning> Application: Listen [0.0.0.0]:8123 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:8123 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:30:07.101243 [ 82 ] {} <Warning> Application: Listen [0.0.0.0]:9000 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:9000 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:30:07.101401 [ 82 ] {} <Warning> Application: Listen [0.0.0.0]:9004 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:9004 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:30:07.101524 [ 82 ] {} <Warning> Application: Listen [0.0.0.0]:9005 failed: Poco::Exception. Code: 1000, e.code() = 98, Net Exception: Address already in use: 0.0.0.0:9005 (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
 
 /entrypoint.sh: create database 'cascata_logs'
 /entrypoint.sh: running /docker-entrypoint-initdb.d/init-db.sql
@@ -82,16 +260,19 @@ Merging configuration file '/etc/clickhouse-server/config.d/cascata.xml'.
 Merging configuration file '/etc/clickhouse-server/config.d/docker_related_config.xml'.
 Logging warning to /var/log/clickhouse-server/clickhouse-server.log
 Logging errors to /var/log/clickhouse-server/clickhouse-server.err.log
-2026.03.07 01:02:27.292212 [ 1 ] {} <Warning> Application: Listen [::]:9009 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
-2026.03.07 01:02:27.775285 [ 1 ] {} <Warning> Context: Linux transparent hugepages are set to "always". Check /sys/kernel/mm/transparent_hugepage/enabled
-2026.03.07 01:02:27.846343 [ 1 ] {} <Warning> Context: Linux threads max count is too low. Check /proc/sys/kernel/threads-max
-2026.03.07 01:02:27.846716 [ 1 ] {} <Warning> Context: Delay accounting is not enabled, OSIOWaitMicroseconds will not be gathered. You can enable it using `sudo sh -c 'echo 1 > /proc/sys/kernel/task_delayacct'` or by using sysctl.
-2026.03.07 01:02:27.846884 [ 1 ] {} <Warning> Context: Available memory at server startup is too low (2GiB).
-2026.03.07 01:02:33.685955 [ 1 ] {} <Warning> Application: Listen [::]:8123 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
-2026.03.07 01:02:33.686235 [ 1 ] {} <Warning> Application: Listen [::]:9000 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
-2026.03.07 01:02:33.686445 [ 1 ] {} <Warning> Application: Listen [::]:9004 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
-2026.03.07 01:02:33.686638 [ 1 ] {} <Warning> Application: Listen [::]:9005 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
----LOGS YUGABYTE---
+2026.03.07 02:30:35.897233 [ 1 ] {} <Warning> Context: Linux transparent hugepages are set to "always". Check /sys/kernel/mm/transparent_hugepage/enabled
+2026.03.07 02:30:35.966633 [ 1 ] {} <Warning> Context: Delay accounting is not enabled, OSIOWaitMicroseconds will not be gathered. You can enable it using `sudo sh -c 'echo 1 > /proc/sys/kernel/task_delayacct'` or by using sysctl.
+2026.03.07 02:30:39.964484 [ 1 ] {} <Warning> Application: Listen [::]:8123 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:30:39.967757 [ 1 ] {} <Warning> Application: Listen [::]:9000 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:30:39.968660 [ 1 ] {} <Warning> Application: Listen [::]:9004 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+2026.03.07 02:30:39.968991 [ 1 ] {} <Warning> Application: Listen [::]:9005 failed: Poco::Exception. Code: 1000, e.code() = 0, DNS error: EAI: Address family for hostname not supported (version 25.8.18.1 (official build)). If it is an IPv6 or IPv4 address and your host has disabled IPv6 or IPv4, then consider to specify not disabled IPv4 or IPv6 address to listen in <listen_host> element of configuration file. Example for disabled IPv6: <listen_host>0.0.0.0</listen_host> . Example for disabled IPv4: <listen_host>::</listen_host>
+=========================================
+=== 3. YUGABYTEDB — DIAGNÓSTICO PROFUNDO ===
+=========================================
+--- a) Motivo da morte do container (Docker Inspect OOM/CGroup) ---
+"OOMKilled":false
+0
+--- b) Logs do Wrapper Python (Stdout/Stderr) ---
 Starting yugabyted...
 ❌ Database failed to start            
 Starting yugabyted...
@@ -109,11 +290,32 @@ Starting yugabyted...
 Starting yugabyted...
 ❌ Database failed to start            
 Starting yugabyted...
----PARTE UM DO YUGABYTE---
----PARTE DOIS DO YUGABYTE---
----PARTE TRÊS DO YUGABYTE---
-               total        used        free      shared  buff/cache   available
-Mem:            1905        1055          84          36         963         849
-Swap:              0           0           0
----PARTE QUATRO DO YUGABYTE---
-[ec2-user@ip-172-26-8-16 ~]$ 
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+Starting yugabyted...
+❌ Database failed to start            
+--- c) Logs do Daemon YB-MASTER Interno ---
+--- d) Logs do Daemon YB-TSERVER Interno ---
+[ec2-user@ip-172-26-12-116 ~]$ 
+
